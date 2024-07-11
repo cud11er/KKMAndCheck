@@ -292,7 +292,7 @@ def loadCheck():
         # дальше - общее и для чека и для коррекции
         fptr.setParam(1008, clientInfo) # данные клиента (приходит пустая строка)
         if not check_print:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True) # чек не печатаем
+            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True) # чек не печатаем #Не печатать чек чтобы не тратить бумагу
         fptr.openReceipt()
 
         i = 0
