@@ -14,11 +14,11 @@ if sys.version_info[0] == 3:
         from winreg import *
     TEXT = str
     RANGE = range
-else:
-    if platform.system() == 'Windows':
-        from _winreg import *
-    TEXT = basestring
-    RANGE = xrange
+#else:
+#    if platform.system() == 'Windows':
+#        from winreg import *
+#    TEXT = basestring
+#    RANGE = xrange
 
 
 class IFptr(object):
