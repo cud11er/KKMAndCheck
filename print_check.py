@@ -1,104 +1,193 @@
-import json
-import datetime
-from flask import Flask, request
 from libfptr10 import *
+import datetime
+import json
 
-app = Flask(__name__)
+# from threading import Thread
+# from pybase64 import b64decode
+# import os
+# from dotenv import load_dotenv
+# import time
+# import telebot
 
-# Функция инициализации ККТ
-def initializationKKT(connectType, ip_kas, inn_company):
+
+# version 24.04.08.1
+# ------------------
+# KASSA_IP ='192.0.0.154'
+# KASSA_IP = os.getenv('KASSA_IP')
+
+
+def initializationKKT(connectType, ip_kassy, inn_company):
+    # инициализация драйвера
     fptr = IFptr("")
-    ip_kas = "192.168.1.1"
-    settings = {
-        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO
-    }
 
-    # Настройки в зависимости от типа подключения
+    # подключение ККТ
     if connectType == "TCP/IP":
-        settings.update({
-            IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-            IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kas,
-            IFptr.LIBFPTR_SETTING_IPPORT: 5555
-        })
-    elif connectType == "Удаленный ПК":
-        settings.update({
+        settings = {
+            IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+            IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
+            IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
+            IFptr.LIBFPTR_SETTING_IPPORT: 5555  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
+        }
+    if connectType == "Удаленный ПК":
+        settings = {
+            IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
             IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_USB,
-            IFptr.LIBFPTR_SETTING_REMOTE_SERVER_ADDR: ip_kas
-        })
-    elif connectType == "USB":
-        settings.update({
-            IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_USB
-        })
+            # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
+            IFptr.LIBFPTR_SETTING_REMOTE_SERVER_ADDR: ip_kassy
+            # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
+        }
+    if connectType == "USB":
+        settings = {
+            IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+            IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_USB,  # \\\\\\\\\\\\ Для подключения к кассе по USB
+        }
 
-    # Применение настроек и открытие соединения с ККТ
     fptr.setSettings(settings)
     fptr.open()
     isOpened = fptr.isOpened()
     fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_REG_INFO)
     fptr.fnQueryData()
-
-    # Проверка успешного открытия и сравнение ИНН компании
     if isOpened == 1 and inn_company != fptr.getParamString(1018).strip():
-        isOpened = 9
-
+        isOpened = 9  # ИНН ККТ не соответсвует ИНН Организации (код ошибки - 9)
+    print('Статус готовности к обмену с ККТ: ' + str(isOpened))
     return isOpened, fptr
 
-# Функция разбора JSON данных
+
+#def checkOfMarring(markingCodeBase64):
+#    markingCode = (b64decode(markingCodeBase64)).decode()
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, markingCode)
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 2)  # товар в стадии реализации
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
+#    fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+#    fptr.beginMarkingCodeValidation()
+#
+#    # дожидаемся окончания проверки и запоминаем результат
+#    while True:
+#        fptr.getMarkingCodeValidationStatus()
+#        if fptr.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
+#            break
+#    validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+#
+#    # подтверждаем реализацию товара с указанным КМ
+#    fptr.acceptMarkingCode()
+#    print("КМ товара прошел проверку - ", markingCode)
+#
+#    return markingCode, validationResult
+
+
 def jsonDisassembly(content):
-    return (
-        content['ip_kassy'], content['inn_сompany'], content['operator'], content['num_predpisania'],
-        content['clientInfo'], content['rnm'],
-        content['fn'], content['adress'], content['fd_number'], content['fd_type'], content['corr_type'],
-        content['sign_calc'], content['check_data'],
-        content['shift_number'], content['check_sum'], content['check_cash'], content['check_electron'],
-        content['check_prepay'], content['check_prepay_offset'],
-        content['check_postpay'], content['barter_pay'], content['sum_NO_VAT'], content['sum_0_VAT'],
-        content['sum_10_VAT'], content['sum_18_VAT'],
-        content['sum_20_VAT'], content['sum_110_VAT'], content['sum_120_VAT'], content['doc_osn'], content['sno'],
-        content['inn_operator'],
-        content['check_print'], len(content['items'])
-    )
+    # разбор контейнера json
+    ip_kassy = content['ip_kassy']
+    inn_company = content['inn_сompany']
+    operator = content['operator']
+    num_predpisania = content['num_predpisania']
+    clientInfo = content['clientInfo']
+    rnm = content['rnm']
+    fn = content['fn']
+    adress = content['adress']
+    fd_number = content['fd_number']
+    fd_type = content['fd_type']
+    corr_type = content['corr_type']
+    sign_calc = content['sign_calc']
+    check_data = content['check_data']
+    shift_number = content['shift_number']
+    check_sum = content['check_sum']
+    check_cash = content['check_cash']
+    check_electron = content['check_electron']
+    check_prepay = content['check_prepay']
+    check_prepay_offset = content['check_prepay_offset']
+    check_postpay = content['check_postpay']
+    barter_pay = content['barter_pay']
+    sum_NO_VAT = content['sum_NO_VAT']
+    sum_0_VAT = content['sum_0_VAT']
+    sum_10_VAT = content['sum_10_VAT']
+    sum_18_VAT = content['sum_18_VAT']
+    sum_20_VAT = content['sum_20_VAT']
+    sum_110_VAT = content['sum_110_VAT']
+    sum_120_VAT = content['sum_120_VAT']
+    doc_osn = content['doc_osn']
+    sno = content['sno']
+    inn_operator = content['inn_operator']
+    check_print = content['check_print']
+    itemsQuantity = len(content['items'])
 
-# Функция разбора JSON данных для товаров
+    return ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
+        check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity
+
+
 def jsonItemsDisassembly(item):
-    return (
-        item['item_number'], item['item_name'], item['item_sign_sub_calc'], item['item_price'], item['item_quantity'],
-        item['item_sum'], item['sign_way_calc'],
-        item['item_mera'], item['t1200_VAT_no'], item['t1200_VAT_0'], item['t1200_VAT_10'], item['t1200_VAT_18'],
-        item['t1200_VAT_20'], item['t1200_VAT_110'], item['t1200_VAT_120'], item['sign_agent'], item['tel_OP'],
-        item['transaction_BPA'], item['tel_PA'], item['tel_OPP'], item['name_OP'], item['adress_OP'], item['inn_OP'],
-        item['data_supplier'], item['inn_supplier'], item['dop_rekvizit']
-    )
+    item_number = item['item_number']
+    item_name = item['item_name']
+    item_sign_sub_calc = item['item_sign_sub_calc']
+    item_price = item['item_price']
+    item_quantity = item['item_quantity']
+    item_sum = item['item_sum']
+    sign_way_calc = item['sign_way_calc']
+    item_mera = item['item_mera']
+    t1200_VAT_no = item['t1200_VAT_no']
+    t1200_VAT_0 = item['t1200_VAT_0']
+    t1200_VAT_10 = item['t1200_VAT_10']
+    t1200_VAT_18 = item['t1200_VAT_18']
+    t1200_VAT_20 = item['t1200_VAT_20']
+    t1200_VAT_110 = item['t1200_VAT_110']
+    t1200_VAT_120 = item['t1200_VAT_120']
+    sign_agent = item['sign_agent']
+    tel_OP = item['tel_OP']
+    transaction_BPA = item['transaction_BPA']
+    tel_PA = item['tel_PA']
+    tel_OPP = item['tel_OPP']
+    name_OP = item['name_OP']
+    adress_OP = item['adress_OP']
+    inn_OP = item['inn_OP']
+    data_supplier = item['data_supplier']
+    inn_supplier = item['inn_supplier']
+    dop_rekvizit = item['dop_rekvizit']
+    return item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
+        t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit
 
-# Функция регистрации товара
+
 def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc,
-                        item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18,
+                        item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, \
                         t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA,
                         tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit, sno, fptr):
-    # Если есть поставщик
     if sign_agent == 3:
         fptr.setParam(1225, data_supplier)
         fptr.utilFormTlv()
         suplierInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)
+
         fptr.setParam(1222, IFptr.LIBFPTR_AT_ANOTHER)
         fptr.setParam(1226, str(inn_supplier))
         fptr.setParam(1224, suplierInfo)
 
-    # Установка параметров товара
     fptr.setParam(IFptr.LIBFPTR_PARAM_COMMODITY_NAME, item_name)
     fptr.setParam(IFptr.LIBFPTR_PARAM_PRICE, item_price)
     fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, item_quantity)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT,
-                  IFptr.LIBFPTR_IU_HOUR if item_mera == 71 else IFptr.LIBFPTR_IU_PIECE)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20 if sno == 1 else IFptr.LIBFPTR_TAX_NO)
-    fptr.setParam(IFptr.LIBFPTR_PARAM_USE_ONLY_TAX_TYPE, True)
-    fptr.setParam(1214, sign_way_calc)
-    fptr.setParam(1212, item_sign_sub_calc)
-    fptr.registration()
+    if item_mera == 71:  # единица измеренения - час
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_HOUR)
+    else:  # единица измеренения - штука
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
 
-# Функция закрытия чека
+    if sno == 1:
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)  # для ПР НДС - 20% (ОСН)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_USE_ONLY_TAX_TYPE, True)
+    else:
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_NO)  # для ПР - НДС не облагается (не ОСН)
+
+    if (item_number != 1) and (item_sign_sub_calc == 10):
+        sign_way_calc = 3
+
+    fptr.setParam(1214, sign_way_calc)  # признак способа расчета: полный расчет (4), аванс (3)
+    fptr.setParam(1212, item_sign_sub_calc)  # предмет расчета: товар (1), услуга (4), платеж (7)
+
+    fptr.registration()
+    return
+
+
 def checkReceiptClosed(fptr):
-    while fptr.checkDocumentClosed() < 0:
+    while fptr.checkDocumentClosed() < 0:  # не удалось проверить закрытие чека
+        print(fptr.errorDescription())
         continue
     if fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):
         CheckClosed = True
@@ -106,131 +195,316 @@ def checkReceiptClosed(fptr):
         fptr.fnQueryData()
         fiscalSign = fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN)
         dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
-    else:
+        print("Фискальные данные чека: ", fiscalSign, " ", dateTime)
+    elif not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # чек не закрылся,- отменяем его
         fptr.cancelReceipt()
         CheckClosed = False
+    print("Результат закрытия чека: " + fptr.errorDescription())
     return CheckClosed, fiscalSign, dateTime
 
-# Главная страница
-@app.route("/")
-def root():
-    return "PCS KKT ATOL SERVER (5034)"
 
-# Обработка POST запроса для загрузки чека
-@app.route("/checkProcessing", methods=['POST'])
 def loadCheck():
-    with open('all_checks3.json', 'r', encoding='utf-8') as f:
-        content = json.load(f)
-
-    print(f"Received JSON data: {content}")
-
+    # Старт обработки тела чека
+    content = ""  #Сюда загружать локальный json
     connectType = content['connect']
-    operator = content['operator']
 
-    # Обработка операторов 'service-ping' и 'service-X-report'
-    if operator in ['service-ping', 'service-X-report']:
+    if content['operator'] == 'service-ping':
         ip_kassy = content['ip_kassy']
         inn_company = content['inn_сompany']
-        connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)
-        status = 2
+        connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)  # инициализация и подключение ККТ
+        status = 2  # по умолчанию - касса не готова !
         fiscalSign = ""
         dateTime = ""
-        if connectStatus == 1:
+        if connectStatus == 1:  # касса готова
             status = 1
-            if operator == 'service-X-report':
-                fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_X)
-                fptr.report()
-        elif connectStatus == 9:
+        if connectStatus == 9:  # ИНН не ИНН !
             status = 9
-        return f"{status}={fiscalSign}={dateTime}"
+        return str(status) + "=" + fiscalSign + "=" + str(dateTime)
 
-    # Вывод JSON данных перед обработкой
-    print(f"Processing JSON data: {content}")
+    if content['operator'] == 'service-X-report':
+        ip_kassy = content['ip_kassy']
+        inn_company = content['inn_сompany']
+        connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)  # инициализация и подключение ККТ
+        status = 2  # по умолчанию - касса не готова !
+        fiscalSign = ""
+        dateTime = ""
+        if connectStatus == 1:  # касса готова
+            status = 1
+            fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_X)
+            fptr.report()
+        if connectStatus == 9:  # ИНН не ИНН !
+            status = 9
+        return str(status) + "=" + fiscalSign + "=" + str(dateTime)
 
-    # Разбор JSON данных для обычной загрузки чека
-    ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity = jsonDisassembly(content)
+    ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, \
+        check_prepay_offset, check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity = jsonDisassembly(
+        content)
 
-    # Инициализация ККТ и проверка срока действия сертификата
-    connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)
+    connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)  # инициализация и подключение ККТ
 
+    #################################### ЗАЩИТА ОТ НЕЛЕГАЛЬНОГО ИСПОЛЬЗОВАНИЯ ####################################
     now = datetime.datetime.now()
     date_expired = datetime.datetime(2030, 7, 14)
     if now > date_expired:
         connectStatus = 9
+    #################################### ЗАЩИТА ОТ НЕЛЕГАЛЬНОГО ИСПОЛЬЗОВАНИЯ ####################################
 
-    if connectStatus == 1:
+    if connectStatus == 1:  # ККТ готова
+
         fiscalSign = '0'
         dateTime = '0'
 
-        # Логин оператора
-        fptr.setParam(1021, operator)
+        fptr.setParam(1021, operator)  # кассир
         fptr.operatorLogin()
 
-        # Установка типа чека
-        if fd_type == 1:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
-                          IFptr.LIBFPTR_RT_SELL if sign_calc == 1 else IFptr.LIBFPTR_RT_SELL_RETURN if sign_calc == 2 else IFptr.LIBFPTR_RT_BUY)
-        elif fd_type == 2:
-            fptr.setParam(1178, datetime.datetime(int(check_data[6:10]), int(check_data[3:5]), int(check_data[:2])))
-            fptr.setParam(1179, num_predpisania)
-            fptr.utilFormTlv()
-            correctionInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)
-            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
-                          IFptr.LIBFPTR_RT_SELL_CORRECTION if sign_calc == 1 else IFptr.LIBFPTR_RT_SELL_RETURN_CORRECTION if sign_calc == 2 else IFptr.LIBFPTR_RT_BUY_CORRECTION)
-            fptr.setParam(1173, 0)
-            fptr.setParam(1174, 1 if corr_type == 1 else 0)
-            fptr.setParam(1177, correctionInfo)
+        # Развилка: простой чек или чек коррекции?
+        if fd_type == 1:  # кассовый чек
+            # fptr.setParam(1062, sno)    # применяемая система налогообложения      # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+            if sign_calc == 1:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL)  # ПРИХОД
+            if sign_calc == 2:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL_RETURN)  # ВОЗВРАТ ПРИХОДА
+            if sign_calc == 3:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_BUY)  # РАСХОД
 
-        # Открытие чека
+        if fd_type == 2:  # чек коррекции
+            # fptr.setParam(1062, sno)    # применяемая система налогообложения      # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+
+            fptr.setParam(1178, datetime.datetime(int(check_data[6:10]), int(check_data[3:5]),
+                                                  int(check_data[:2])))  # нужны, если по предписанию ФНС
+            fptr.setParam(1179, num_predpisania)  # нужны, если по предписанию ФНС
+            fptr.utilFormTlv()  # нужны, если по предписанию ФНС
+            correctionInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)  # нужны, если по предписанию ФНС
+
+            if sign_calc == 1:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL_CORRECTION)  # КОРРЕКЦИЯ ПРИХОДА
+            if sign_calc == 2:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
+                              IFptr.LIBFPTR_RT_SELL_RETURN_CORRECTION)  # КОРРЕКЦИЯ ВОЗВРАТА ПРИХОДА
+            if sign_calc == 3:
+                fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_BUY_CORRECTION)  # КОРРЕКЦИЯ РАСХОДА
+
+            fptr.setParam(1173, 0)  # тип коррекции - самостоятельно (по предписанию - 1)
+            fptr.setParam(1174, correctionInfo)  # составной реквизит, состоит из "1178" и "1179"
+            if doc_osn != 0:
+                fptr.setParam(1192, str(doc_osn))
+
+        # дальше - общее и для чека и для коррекции
+        fptr.setParam(1008, clientInfo)  # данные клиента (приходит пустая строка)
+        if not check_print:
+            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY,
+                          True)  # чек не печатаем #Не печатать чек чтобы не тратить бумагу
         fptr.openReceipt()
 
-        # Регистрация товаров
-        for item in content['items']:
-            item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, t1200_VAT_110, \
-                t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit = jsonItemsDisassembly(
-                item)
-
+        i = 0
+        while i < itemsQuantity:
+            item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
+                t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit = jsonItemsDisassembly(
+                content['items'][i])
             productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum,
                                 sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18,
                                 t1200_VAT_20, \
                                 t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP,
-                                name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit, sno, fptr)
+                                name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit, sno,
+                                fptr)  # регистрация каждого товара в чеке
+            i += 1
 
-        # Закрытие чека и получение результатов
-        fptr.receiptTotal()
         if check_cash > 0:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)  # наличная оплата
             fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_cash)
             fptr.payment()
-
         if check_electron > 0:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)  # безналичная оплата
             fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_electron)
             fptr.payment()
 
-        fptr.closeReceipt()
+        # if check_prepay > 0:
+        #    fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID) # аванс
 
-        # Проверка закрытия чека
-        CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr)
+        if check_postpay > 0:
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CREDIT)  # кредит
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_postpay)
+            fptr.payment()
 
+        if check_prepay_offset > 0:
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)  # зачет предоплаты (аванса)
+            fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_prepay_offset)
+            fptr.payment()
+
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, sum_20_VAT)
+        fptr.receiptTax()
+
+        fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, check_sum)
+        fptr.receiptTotal()
+
+        fptr.closeReceipt()  # закрытие чека
+        CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr)  # обработка результата операции
+        status = 0
         if CheckClosed:
-            fptr.close()
             status = 1
-        else:
-            fptr.close()
-            status = 4
+        fptr.close()
+
     elif connectStatus == 9:
         status = 9
         fiscalSign = ""
         dateTime = ""
+        print("ИНН ККТ не соответствует ИНН организации!")
     else:
         status = 2
         fiscalSign = ""
         dateTime = ""
+        print("КАССА ЗАНЯТА!")
+    return str(status) + "=" + fiscalSign + "=" + str(dateTime)
 
-    print(f"Processed request. Status={status}, fiscalSign={fiscalSign}, dateTime={dateTime}")
-    return f"{status}={fiscalSign}={dateTime}"
+def testKkt():
+    # Инициализация драйвера
+    fptr = IFptr("")
+    version = fptr.version()
 
-# Запуск Flask сервера
+    print('version')
+    print(version)
+
+    # Подключение ККТ
+    settings = {
+        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
+        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.153",
+        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+    }
+    fptr.setSettings(settings)
+
+    fptr.open()
+    isOpened = fptr.isOpened()
+    print('isOpened')
+    fptr.lineFeed()
+    print(isOpened)
+    # return 'version: ' + str(version)
+
+    # Закрытие смены
+    fptr.setParam(fptr.LIBFPTR_PARAM_REPORT_ELECTRONICALLY, 1)
+
+    fptr.setParam(1021, "Кассир Иванов И.")
+    fptr.setParam(1203, "123456789047")
+    fptr.operatorLogin()
+
+    fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
+    fptr.report()
+
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_PRINT_REPORT, False)
+    # fptr.deviceReboot()
+
+    return 'Cмена закрыта'
+
+def testOFD():
+    # Инициализация драйвера
+    fptr = IFptr("")
+    version = fptr.version()
+    print('version')
+    print(version)
+    # Подключение ККТ
+    settings = {
+        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
+        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.153",
+        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+    }
+    fptr.setSettings(settings)
+    fptr.open()
+    isOpened = fptr.isOpened()
+    print('isOpened')
+    print(isOpened)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_OFD_TEST)
+    fptr.report()
+
+    return 'OK'
+
+
+def get_INN():
+    # Инициализация драйвера
+    fptr = IFptr("")
+    version = fptr.version()
+    print('version')
+    print(version)
+    # Подключение ККТ
+    settings = {
+        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
+        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.153",
+        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+    }
+    fptr.setSettings(settings)
+    fptr.open()
+    isOpened = fptr.isOpened()
+    print('isOpened')
+    print(isOpened)
+    fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_REG_INFO)
+    fptr.fnQueryData()
+    INN = fptr.getParamString(1018)
+    print('ИНН ', INN)
+    return INN
+
+    # Подключение ККТ
+    settings = {
+        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
+        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
+        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.153",
+        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+    }
+    fptr.setSettings(settings)
+
+    fptr.open()
+    isOpened = fptr.isOpened()
+    print('isOpened')
+    fptr.lineFeed()
+    print(isOpened)
+    # return 'version: ' + str(version)
+
+    # Закрытие смены
+    fptr.setParam(fptr.LIBFPTR_PARAM_REPORT_ELECTRONICALLY, 1)
+
+    fptr.setParam(1021, "Кассир Иванов И.")
+    fptr.setParam(1203, "123456789047")
+    fptr.operatorLogin()
+
+    fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
+    fptr.report()
+
+    # fptr.setParam(IFptr.LIBFPTR_PARAM_PRINT_REPORT, False)
+    # fptr.deviceReboot()
+
+    return 'Cмена закрыта'
+
+def initializationKKT():
+    print("Функция initializationKKT вызвана")
+
+def testOFD():
+    print("Функция testOFD вызвана")
+
+def get_INN():
+    print("Функция get_INN вызвана")
+
+def main():
+    while True:
+        print("Пожалуйста, выберите действие:")
+        print("1 - initializationKKT")
+        print("2 - testOFD")
+        print("3 - get_INN")
+        print("0 - Выход")
+
+        choice = input("Введите номер действия: ")
+
+        if choice == '1':
+            initializationKKT()
+        elif choice == '2':
+            testOFD()
+        elif choice == '3':
+            get_INN()
+        elif choice == '0':
+            print("Выход из программы")
+            break
+        else:
+            print("Неверный выбор, попробуйте снова")
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5034)
+    main()
