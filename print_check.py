@@ -3,6 +3,8 @@ import datetime
 import json
 from threading import Thread
 from pybase64 import b64decode
+
+
 #import os
 #from dotenv import load_dotenv
 #import time
@@ -83,7 +85,6 @@ def jsonDisassembly(content):
 
     return ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
         check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity
-
 
 
 def jsonItemsDisassembly(item):
@@ -306,6 +307,7 @@ def loadCheck():
 
     return results
 
+
 def testKkt():
     # Инициализация драйвера
     fptr = IFptr("")
@@ -345,6 +347,7 @@ def testKkt():
 
     return 'Cмена закрыта'
 
+
 def testOFD():
     # Инициализация драйвера
     fptr = IFptr("")
@@ -367,6 +370,7 @@ def testOFD():
     fptr.report()
 
     return 'OK'
+
 
 def get_INN():
     # Инициализация драйвера
@@ -422,6 +426,7 @@ def get_INN():
     # fptr.deviceReboot()
 
     return 'Cмена закрыта'
+
 
 if __name__ == "__main__":
     while True:
