@@ -1,5 +1,5 @@
 from flask import Flask, request #, jsonify
-from libfptr10 import *
+from libfptr10 import IFptr
 import datetime
 #from threading import Thread
 #from pybase64 import b64decode
@@ -50,31 +50,44 @@ def initializationKKT(connectType, ip_kassy, inn_company):
         print('Статус готовности к обмену с ККТ: '+ str(isOpened))    
         return isOpened, fptr
     
+def checkReceiptClosed():
+        while fptr.checkDocumentClosed() < 0:   # не удалось проверить состояние документа.
+            print(fptr.errorDescription())
+            continue
+        CheckClosed = True
+        if not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # документ не закрылся, отменяем.
+            fptr.cancelReceipt()
+            CheckClosed = False
+            print("Чек отменен!")
+            botMessage = "Неудачная обработка чека"
+            bot.send_message(user_id, botMessage)
+        print("Результат операции: " + fptr.errorDescription())       
+        return CheckClosed
+    
+def checkOfMarring(markingCodeBase64):
 
-#def checkOfMarring(markingCodeBase64):
-#
-#        markingCode = (b64decode(markingCodeBase64)).decode()
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, markingCode)
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 2)   # товар в стадии реализации
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
-#        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
-#        fptr.beginMarkingCodeValidation()
-#
-#        # дожидаемся окончания проверки и запоминаем результат
-#        while True:
-#            fptr.getMarkingCodeValidationStatus()
-#            if fptr.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
-#                break
-#        validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
-#
-#        # подтверждаем реализацию товара с указанным КМ
-#        fptr.acceptMarkingCode()
-#        print("КМ товара прошел проверку - ", markingCode)
-#
-#        return markingCode, validationResult
+        markingCode = (b64decode(markingCodeBase64)).decode()
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_TYPE, IFptr.LIBFPTR_MCT12_AUTO)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE, markingCode)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_CODE_STATUS, 2)   # товар в стадии реализации
+        fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, 1.000)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
+        fptr.setParam(IFptr.LIBFPTR_PARAM_MARKING_PROCESSING_MODE, 0)
+        fptr.beginMarkingCodeValidation()
 
+        # дожидаемся окончания проверки и запоминаем результат
+        while True:
+            fptr.getMarkingCodeValidationStatus()
+            if fptr.getParamBool(IFptr.LIBFPTR_PARAM_MARKING_CODE_VALIDATION_READY):
+                break
+        validationResult = fptr.getParamInt(IFptr.LIBFPTR_PARAM_MARKING_CODE_ONLINE_VALIDATION_RESULT)
+
+        # подтверждаем реализацию товара с указанным КМ
+        fptr.acceptMarkingCode()
+        print("КМ товара прошел проверку - ", markingCode)
+
+        return markingCode, validationResult
+    
 def jsonDisassembly(content):
     # разбор контейнера json
     ip_kassy = content['ip_kassy']
@@ -245,7 +258,7 @@ def loadCheck():
 
     #################################### ЗАЩИТА ОТ НЕЛЕГАЛЬНОГО ИСПОЛЬЗОВАНИЯ ####################################
     now = datetime.datetime.now()
-    date_expired = datetime.datetime(2030, 7, 14)
+    date_expired = datetime.datetime(2024, 7, 14)
     if now > date_expired:
         connectStatus = 9
     #################################### ЗАЩИТА ОТ НЕЛЕГАЛЬНОГО ИСПОЛЬЗОВАНИЯ ####################################
@@ -292,7 +305,7 @@ def loadCheck():
         # дальше - общее и для чека и для коррекции
         fptr.setParam(1008, clientInfo) # данные клиента (приходит пустая строка)
         if not check_print:
-            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True) # чек не печатаем #Не печатать чек чтобы не тратить бумагу
+            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True) # чек не печатаем
         fptr.openReceipt()
 
         i = 0
