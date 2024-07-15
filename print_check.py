@@ -1,25 +1,26 @@
 from libfptr10 import IFptr
 import datetime
 import json
-from threading import Thread
-from pybase64 import b64decode
-#import os
-#from dotenv import load_dotenv
-#import time
-#import telebot
 
+
+#"ip_kassy": "192.0.0.193",
 
 def initializationKKT(connectType, ip_kassy, inn_company):
     # инициализация драйвера
     fptr = IFptr("")
-
+    #Подгрузка данных для кассы
+    with open('connect_IP.json', 'r', encoding='utf-8') as file:
+        jsonData = json.load(file)
+    ip_kassy = jsonData['ip_kassy']
+    connectType = jsonData['connection_Type']
+    port = jsonData['port']
     # подключение ККТ
     if connectType == "TCP/IP":
         settings = {
             IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
             IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
             IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
-            IFptr.LIBFPTR_SETTING_IPPORT: 5555  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
+            IFptr.LIBFPTR_SETTING_IPPORT: port  # \\\\\\\\\\\\ Для подключения к кассе по TCP/IP
         }
     if connectType == "Удаленный ПК":
         settings = {
@@ -331,13 +332,17 @@ def testKkt():
 
     print('version')
     print(version)
+    with open('connect_IP.json', 'r', encoding='utf-8') as file:
+        jsonData = json.load(file)
+    ip_kassy = jsonData['ip_kassy']
+    port = jsonData['port']
 
     # Подключение ККТ
     settings = {
         IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
         IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.193",
-        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+        IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,
+        IFptr.LIBFPTR_SETTING_IPPORT: port
     }
     fptr.setSettings(settings)
 
@@ -370,11 +375,15 @@ def testOFD():
     print('version')
     print(version)
     # Подключение ККТ
+    with open('connect_IP.json', 'r', encoding='utf-8') as file:
+        jsonData = json.load(file)
+    ip_kassy = jsonData['ip_kassy']
+    port = jsonData['port']
     settings = {
         IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
         IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.193",
-        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+        IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,
+        IFptr.LIBFPTR_SETTING_IPPORT: port
     }
     fptr.setSettings(settings)
     fptr.open()
@@ -392,12 +401,17 @@ def get_INN():
     version = fptr.version()
     print('version')
     print(version)
+    with open('connect_IP.json', 'r', encoding='utf-8') as file:
+        jsonData = json.load(file)
+    ip_kassy = jsonData['ip_kassy']
+    port = jsonData['port']
+
     # Подключение ККТ
     settings = {
         IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
         IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.193",
-        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+        IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,
+        IFptr.LIBFPTR_SETTING_IPPORT: port
     }
     fptr.setSettings(settings)
     fptr.open()
@@ -445,10 +459,11 @@ if __name__ == "__main__":
     while True:
         # Выводим меню для пользователя
         print("Выберите действие:")
-        print("1. Вызвать функцию loadCheck()")
-        print("2. Вызвать функцию testOFD")
-        print('3. Вызвать функцию get_INN')
-        print('4. Выход')
+        print("1. Начать печать чеков из JSON")
+        print("2. Тест ОФД")
+        print('3. Получить ИНН')
+        print('4. Тест ККМ')
+        print('5. Выход')
 
         # Получаем выбор пользователя
         choice = input("Введите цифру выбора: ")
@@ -461,6 +476,8 @@ if __name__ == "__main__":
         elif choice == '3':
             get_INN()
         elif choice == '4':
+            testKkt()
+        elif choice == '5':
             print("Выход из программы.")
             exit()
         else:

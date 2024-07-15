@@ -1,0 +1,10 @@
+{
+  "connection_Type": "TCP/IP",
+  "ip_kassy": "192.0.0.193",
+  "port": "5555",
+  "comments": [
+    "connection_Type - Типо соединения: TCP/IP, USB или Удаленный ПК",
+    "ip_kassy - IP-адресс ККМ",
+    "port - Порт ККМ"
+  ]
+}
