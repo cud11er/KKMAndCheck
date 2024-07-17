@@ -3,10 +3,11 @@ import datetime
 import json
 from tqdm import tqdm
 
-def initializationKKT(connectType, ip_kassy, inn_company):
+
+def initializationKKT(inn_company):
     # инициализация драйвера
     fptr = IFptr("")
-    #Подгрузка данных для кассы
+    # Подгрузка данных для кассы
     with open('settings.json', 'r', encoding='utf-8') as file:
         jsonData = json.load(file)
     ip_kassy = jsonData['ip_kassy']
@@ -40,7 +41,7 @@ def initializationKKT(connectType, ip_kassy, inn_company):
     isOpened = fptr.isOpened()
     fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_REG_INFO)
     fptr.fnQueryData()
-    #if isOpened == 1 and inn_company != fptr.getParamString(1018).strip():
+    # if isOpened == 1 and inn_company != fptr.getParamString(1018).strip():
     #    isOpened = 9  # ИНН ККТ не соответсвует ИНН Организации (код ошибки - 9)
     print('\nСтатус готовности к обмену с ККТ: ' + str(isOpened))
     return isOpened, fptr
@@ -81,9 +82,10 @@ def jsonDisassembly(content):
     check_print = content['check_print']
     itemsQuantity = len(content['items'])
 
-    return ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
-        check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity
-
+    return ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, \
+        corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, \
+        check_prepay_offset, check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, \
+        sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity
 
 
 def jsonItemsDisassembly(item):
@@ -113,8 +115,9 @@ def jsonItemsDisassembly(item):
     data_supplier = item['data_supplier']
     inn_supplier = item['inn_supplier']
     dop_rekvizit = item['dop_rekvizit']
-    return item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
-        t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit
+    return item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, \
+        t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, \
+        tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit
 
 
 def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc,
@@ -198,8 +201,7 @@ def loadCheck():
                 if check['operator'] == 'service-ping':
                     ip_kassy = check['ip_kassy']
                     inn_company = check['inn_сompany']
-                    connectStatus, fptr = initializationKKT(connectType, ip_kassy,
-                                                            inn_company)  # инициализация и подключение ККТ
+                    connectStatus, fptr = initializationKKT(inn_company)  # инициализация и подключение ККТ
                     status = 2  # по умолчанию - касса не готова!
                     fiscalSign = ""
                     dateTime = ""
@@ -212,8 +214,7 @@ def loadCheck():
                 elif check['operator'] == 'service-X-report':
                     ip_kassy = check['ip_kassy']
                     inn_company = check['inn_сompany']
-                    connectStatus, fptr = initializationKKT(connectType, ip_kassy,
-                                                            inn_company)  # инициализация и подключение ККТ
+                    connectStatus, fptr = initializationKKT(inn_company)  # инициализация и подключение ККТ
                     status = 2
                     fiscalSign = ""
                     dateTime = ""
@@ -227,12 +228,13 @@ def loadCheck():
 
                 else:
                     # Используем функции jsonDisassembly и jsonItemsDisassembly для разбора JSON
-                    ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
-                        check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity = jsonDisassembly(
-                        check)
+                    ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, \
+                        corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, \
+                        check_prepay, check_prepay_offset, check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, \
+                        sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, \
+                        check_print, itemsQuantity = jsonDisassembly(check)
 
-                    connectStatus, fptr = initializationKKT(connectType, ip_kassy,
-                                                            inn_company)  # инициализация и подключение ККТ
+                    connectStatus, fptr = initializationKKT(inn_company)  # инициализация и подключение ККТ
 
                     if connectStatus == 1:  # ККТ готова
                         fiscalSign = '0'
@@ -286,18 +288,17 @@ def loadCheck():
                         fptr.openReceipt()
 
                         for i in range(itemsQuantity):
-                            item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
-                                t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit = jsonItemsDisassembly(
-                                check['items'][i])
+                            item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, \
+                                sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, \
+                                t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, \
+                                tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, \
+                                dop_rekvizit = jsonItemsDisassembly(check['items'][i])
+
                             productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity,
-                                                item_sum,
-                                                sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10,
-                                                t1200_VAT_18,
-                                                t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP,
-                                                transaction_BPA,
-                                                tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier,
-                                                inn_supplier,
-                                                dop_rekvizit, sno, fptr)
+                                                item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0,
+                                                t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, t1200_VAT_110, t1200_VAT_120,
+                                                sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP,
+                                                adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit, sno, fptr)
 
                         if check_cash > 0:
                             fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
@@ -351,12 +352,12 @@ def loadCheck():
 
             pbar.update(1)  # Обновляем прогрессбар на каждой итерации
 
-
     # Сохраняем обновленные данные в файл
     with open('all_checks2.json', 'w', encoding='utf-8') as file:
         json.dump(content, file, ensure_ascii=False)
 
     return results
+
 
 def testKkt():
     # Инициализация драйвера
@@ -401,6 +402,7 @@ def testKkt():
 
     return 'Cмена закрыта'
 
+
 def testOFD():
     # Инициализация драйвера
     fptr = IFptr("")
@@ -421,12 +423,12 @@ def testOFD():
     fptr.setSettings(settings)
     fptr.open()
     isOpened = fptr.isOpened()
-    print('isOpened')
-    print(isOpened)
+    print(f'isOpened {isOpened}')
     fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_OFD_TEST)
     fptr.report()
 
     return 'OK'
+
 
 def get_INN():
     # Инициализация драйвера
@@ -449,44 +451,14 @@ def get_INN():
     fptr.setSettings(settings)
     fptr.open()
     isOpened = fptr.isOpened()
-    print('isOpened')
-    print(isOpened)
+    print(f"isOpened {isOpened}")
+
     fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_REG_INFO)
     fptr.fnQueryData()
     INN = fptr.getParamString(1018)
-    print('ИНН ', INN)
+    print(f'ИНН {INN}')
     return INN
 
-    # Подключение ККТ
-    settings = {
-        IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
-        IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-        IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,
-        IFptr.LIBFPTR_SETTING_IPPORT: port
-    }
-    fptr.setSettings(settings)
-
-    fptr.open()
-    isOpened = fptr.isOpened()
-    print('isOpened')
-    fptr.lineFeed()
-    print(isOpened)
-    # return 'version: ' + str(version)
-
-    # Закрытие смены
-    fptr.setParam(fptr.LIBFPTR_PARAM_REPORT_ELECTRONICALLY, 1)
-
-    fptr.setParam(1021, "Кассир Иванов И.")
-    fptr.setParam(1203, "123456789047")
-    fptr.operatorLogin()
-
-    fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_CLOSE_SHIFT)
-    fptr.report()
-
-    # fptr.setParam(IFptr.LIBFPTR_PARAM_PRINT_REPORT, False)
-    # fptr.deviceReboot()
-
-    return 'Cмена закрыта'
 
 if __name__ == "__main__":
     while True:
