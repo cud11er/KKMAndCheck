@@ -1,7 +1,7 @@
 from libfptr10 import IFptr
 import datetime
 import json
-from tqdm import tqdm  # Импортируем tqdm
+from tqdm import tqdm
 
 def initializationKKT(connectType, ip_kassy, inn_company):
     # инициализация драйвера
