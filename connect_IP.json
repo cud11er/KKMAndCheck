@@ -1,6 +1,6 @@
 {
   "connection_Type": "TCP/IP",
-  "ip_kassy": "192.0.0.193",
+  "ip_kassy": "192.0.0.192",
   "port": "5555",
   "comments": [
     "connection_Type - Типо соединения: TCP/IP, USB или Удаленный ПК",

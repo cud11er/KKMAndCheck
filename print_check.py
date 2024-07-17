@@ -2,9 +2,6 @@ from libfptr10 import IFptr
 import datetime
 import json
 
-
-#"ip_kassy": "192.0.0.193",
-
 def initializationKKT(connectType, ip_kassy, inn_company):
     # инициализация драйвера
     fptr = IFptr("")
@@ -155,7 +152,7 @@ def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, 
     return
 
 
-def checkReceiptClosed(fptr):
+def checkReceiptClosed(fptr, check_key, content):
     while fptr.checkDocumentClosed() < 0:  # не удалось проверить закрытие чека
         print(fptr.errorDescription())
         continue
@@ -166,9 +163,14 @@ def checkReceiptClosed(fptr):
         fiscalSign = fptr.getParamString(IFptr.LIBFPTR_PARAM_FISCAL_SIGN)
         dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
         print("Фискальные данные чека: ", fiscalSign, " ", dateTime)
-    elif not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # чек не закрылся,- отменяем его
+
+        # Установка check_print в True после успешного закрытия чека
+        content[check_key]['check_print'] = True
+
+    elif not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # чек не закрылся, отменяем его
         fptr.cancelReceipt()
         CheckClosed = False
+
     print("Результат закрытия чека: " + fptr.errorDescription())
     return CheckClosed, fiscalSign, dateTime
 
@@ -304,7 +306,7 @@ def loadCheck():
             fptr.receiptTotal()
 
             fptr.closeReceipt() # закрытие чека
-            CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr)    # обработка результата операции
+            CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr, key, content)    # обработка результата операции
             status = 0
             if CheckClosed:
                 status = 1
@@ -322,6 +324,9 @@ def loadCheck():
             print("КАССА ЗАНЯТА!")
 
         results.append(f"{status}={fiscalSign}={dateTime}")
+
+    with open('all_checks2.json', 'w', encoding='utf-8') as file:
+        json.dump(content, file, ensure_ascii=False)
 
     return results
 
