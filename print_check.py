@@ -12,6 +12,7 @@ def initializationKKT(connectType, ip_kassy, inn_company):
     ip_kassy = jsonData['ip_kassy']
     connectType = jsonData['connection_Type']
     port = jsonData['port']
+    remote_IP_address = jsonData['remote_address_IP']
     # подключение ККТ
     if connectType == "TCP/IP":
         settings = {
@@ -25,7 +26,7 @@ def initializationKKT(connectType, ip_kassy, inn_company):
             IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
             IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_USB,
             # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
-            IFptr.LIBFPTR_SETTING_REMOTE_SERVER_ADDR: ip_kassy
+            IFptr.LIBFPTR_SETTING_REMOTE_SERVER_ADDR: remote_IP_address
             # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
         }
     if connectType == "USB":
@@ -117,7 +118,7 @@ def jsonItemsDisassembly(item):
 
 
 def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc,
-                        item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, \
+                        item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18,
                         t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA,
                         tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit, sno, fptr):
     if sign_agent == 3:
@@ -460,8 +461,8 @@ def get_INN():
     settings = {
         IFptr.LIBFPTR_SETTING_MODEL: IFptr.LIBFPTR_MODEL_ATOL_AUTO,
         IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_TCPIP,
-        IFptr.LIBFPTR_SETTING_IPADDRESS: "192.0.0.193",
-        IFptr.LIBFPTR_SETTING_IPPORT: 5555
+        IFptr.LIBFPTR_SETTING_IPADDRESS: ip_kassy,
+        IFptr.LIBFPTR_SETTING_IPPORT: port
     }
     fptr.setSettings(settings)
 

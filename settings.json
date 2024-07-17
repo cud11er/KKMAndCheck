@@ -2,9 +2,11 @@
   "connection_Type": "TCP/IP",
   "ip_kassy": "192.0.0.210",
   "port": "5555",
+  "remote_address_IP": "",
   "comments": [
     "connection_Type - Типо соединения: TCP/IP, USB или Удаленный ПК",
-    "ip_kassy - IP-адресс ККМ",
-    "port - Порт ККМ"
+    "ip_kassy - IP-адрес ККМ",
+    "port - Порт ККМ",
+    "remote_address_IP - IP адрес удаленного ПК"
   ]
 }
