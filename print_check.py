@@ -1,6 +1,7 @@
 from libfptr10 import IFptr
 import datetime
 import json
+from tqdm import tqdm  # Импортируем tqdm
 
 def initializationKKT(connectType, ip_kassy, inn_company):
     # инициализация драйвера
@@ -182,160 +183,172 @@ def loadCheck():
 
     results = []  # Создание массива для записи каждого чека
 
-    # Старт обработки тела чека
-    for key, check in content.items():
-        connectType = check['connect']
-        printStatus = check.get('check_print', False)
+    # Используем tqdm для отслеживания прогресса
+    with tqdm(total=len(content), desc="Обработка чеков", unit="чек") as pbar:
+        # Старт обработки тела чека
+        for key, check in content.items():
+            connectType = check['connect']
+            printStatus = check.get('check_print', False)
 
-        if printStatus:
-            print(f"Чек с ОСН {key} уже напечатан.")
-            continue
+            if printStatus:
+                print(f"Чек с ключом {key} уже напечатан.")
+                continue
 
-        if check['operator'] == 'service-ping':
-            ip_kassy = check['ip_kassy']
-            inn_company = check['inn_сompany']
-            connectStatus, fptr = initializationKKT(connectType, ip_kassy,
-                                                    inn_company)  # инициализация и подключение ККТ
-            status = 2  # по умолчанию - касса не готова!
-            fiscalSign = ""
-            dateTime = ""
-            if connectStatus == 1:  # касса готова
-                status = 1
-            if connectStatus == 9:  # ИНН не ИНН!
-                status = 9
-            results.append(f"{status}={fiscalSign}={dateTime}")
-            continue
+            if check['operator'] == 'service-ping':
+                ip_kassy = check['ip_kassy']
+                inn_company = check['inn_сompany']
+                connectStatus, fptr = initializationKKT(connectType, ip_kassy,
+                                                        inn_company)  # инициализация и подключение ККТ
+                status = 2  # по умолчанию - касса не готова!
+                fiscalSign = ""
+                dateTime = ""
+                if connectStatus == 1:  # касса готова
+                    status = 1
+                if connectStatus == 9:  # ИНН не ИНН!
+                    status = 9
+                results.append(f"{status}={fiscalSign}={dateTime}")
 
-        if check['operator'] == 'service-X-report':
-            ip_kassy = check['ip_kassy']
-            inn_company = check['inn_сompany']
-            connectStatus, fptr = initializationKKT(connectType, ip_kassy,
-                                                    inn_company)  # инициализация и подключение ККТ
-            status = 2
-            fiscalSign = ""
-            dateTime = ""
-            if connectStatus == 1:  # касса готова
-                status = 1
-                fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_X)
-                fptr.report()
-            if connectStatus == 9:  # ИНН не ИНН!
-                status = 9
-            results.append(f"{status}={fiscalSign}={dateTime}")
-            continue
+            elif check['operator'] == 'service-X-report':
+                ip_kassy = check['ip_kassy']
+                inn_company = check['inn_сompany']
+                connectStatus, fptr = initializationKKT(connectType, ip_kassy,
+                                                        inn_company)  # инициализация и подключение ККТ
+                status = 2
+                fiscalSign = ""
+                dateTime = ""
+                if connectStatus == 1:  # касса готова
+                    status = 1
+                    fptr.setParam(IFptr.LIBFPTR_PARAM_REPORT_TYPE, IFptr.LIBFPTR_RT_X)
+                    fptr.report()
+                if connectStatus == 9:  # ИНН не ИНН!
+                    status = 9
+                results.append(f"{status}={fiscalSign}={dateTime}")
 
-        # Используем функции jsonDisassembly и jsonItemsDisassembly для разбора JSON
-        ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
-            check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity = jsonDisassembly(
-            check)
+            else:
+                # Используем функции jsonDisassembly и jsonItemsDisassembly для разбора JSON
+                ip_kassy, inn_company, operator, num_predpisania, clientInfo, rnm, fn, adress, fd_number, fd_type, corr_type, sign_calc, check_data, shift_number, check_sum, check_cash, check_electron, check_prepay, check_prepay_offset, \
+                    check_postpay, barter_pay, sum_NO_VAT, sum_0_VAT, sum_10_VAT, sum_18_VAT, sum_20_VAT, sum_110_VAT, sum_120_VAT, doc_osn, sno, inn_operator, check_print, itemsQuantity = jsonDisassembly(
+                    check)
 
-        connectStatus, fptr = initializationKKT(connectType, ip_kassy, inn_company)  # инициализация и подключение ККТ
+                connectStatus, fptr = initializationKKT(connectType, ip_kassy,
+                                                        inn_company)  # инициализация и подключение ККТ
 
-        if connectStatus == 1:  # ККТ готова
-            fiscalSign = '0'
-            dateTime = '0'
+                if connectStatus == 1:  # ККТ готова
+                    fiscalSign = '0'
+                    dateTime = '0'
 
-            fptr.setParam(1021, operator)  # кассир
-            fptr.operatorLogin()
+                    fptr.setParam(1021, operator)  # кассир
+                    fptr.operatorLogin()
 
-            # Развилка: простой чек или чек коррекции?
-            if fd_type == 1:  # кассовый чек
-                # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
-                if sign_calc == 1:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL)  # ПРИХОД
-                if sign_calc == 2:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL_RETURN)  # ВОЗВРАТ ПРИХОДА
-                if sign_calc == 3:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_BUY)  # РАСХОД
+                    # Развилка: простой чек или чек коррекции?
+                    if fd_type == 1:  # кассовый чек
+                        # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                        if sign_calc == 1:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL)  # ПРИХОД
+                        if sign_calc == 2:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
+                                          IFptr.LIBFPTR_RT_SELL_RETURN)  # ВОЗВРАТ ПРИХОДА
+                        if sign_calc == 3:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_BUY)  # РАСХОД
 
-            if fd_type == 2:  # чек коррекции
-                # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
-                fptr.setParam(1178, datetime.datetime(int(check_data[6:10]), int(check_data[3:5]),
-                                                      int(check_data[:2])))  # нужны, если по предписанию ФНС
-                fptr.setParam(1179, num_predpisania)  # нужны, если по предписанию ФНС
-                fptr.utilFormTlv()  # нужны, если по предписанию ФНС
-                correctionInfo = fptr.getParamByteArray(IFptr.LIBFPTR_PARAM_TAG_VALUE)  # нужны, если по предписанию ФНС
+                    if fd_type == 2:  # чек коррекции
+                        # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                        fptr.setParam(1178, datetime.datetime(int(check_data[6:10]), int(check_data[3:5]),
+                                                              int(check_data[:2])))  # нужны, если по предписанию ФНС
+                        fptr.setParam(1179, num_predpisania)  # нужны, если по предписанию ФНС
+                        fptr.utilFormTlv()  # нужны, если по предписанию ФНС
+                        correctionInfo = fptr.getParamByteArray(
+                            IFptr.LIBFPTR_PARAM_TAG_VALUE)  # нужны, если по предписанию ФНС
 
-                if sign_calc == 1:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
-                                  IFptr.LIBFPTR_RT_SELL_CORRECTION)  # КОРРЕКЦИЯ ПРИХОДА
-                if sign_calc == 2:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
-                                  IFptr.LIBFPTR_RT_SELL_RETURN_CORRECTION)  # КОРРЕКЦИЯ ВОЗВРАТА ПРИХОДА
-                if sign_calc == 3:
-                    fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
-                                  IFptr.LIBFPTR_RT_BUY_CORRECTION)  # КОРРЕКЦИЯ РАСХОДА
+                        if sign_calc == 1:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
+                                          IFptr.LIBFPTR_RT_SELL_CORRECTION)  # КОРРЕКЦИЯ ПРИХОДА
+                        if sign_calc == 2:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
+                                          IFptr.LIBFPTR_RT_SELL_RETURN_CORRECTION)  # КОРРЕКЦИЯ ВОЗВРАТА ПРИХОДА
+                        if sign_calc == 3:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE,
+                                          IFptr.LIBFPTR_RT_BUY_CORRECTION)  # КОРРЕКЦИЯ РАСХОДА
 
-                fptr.setParam(1173, 0)  # тип коррекции - самостоятельно (по предписанию - 1)
-                fptr.setParam(1174, correctionInfo)  # составной реквизит, состоит из "1178" и "1179"
-                if doc_osn != 0:
-                    fptr.setParam(1192, str(doc_osn))
+                        fptr.setParam(1173, 0)  # тип коррекции - самостоятельно (по предписанию - 1)
+                        fptr.setParam(1174, correctionInfo)  # составной реквизит, состоит из "1178" и "1179"
+                        if doc_osn != 0:
+                            fptr.setParam(1192, str(doc_osn))
 
-            # дальше - общее и для чека и для коррекции
+                    # дальше - общее и для чека и для коррекции
 
-            fptr.setParam(1008, clientInfo)  # данные клиента (приходит пустая строка)
-            # !!! уБРАТЬ КОММЕНТАРИИ НИЖЕ ЕСЛИ clientInfo НЕ ПУСТОЙ !!!
-            # if not check_print:
-            #     fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True)  # чек не печатаем
-            fptr.openReceipt()
+                    fptr.setParam(1008, clientInfo)  # данные клиента (приходит пустая строка)
+                    # !!! уБРАТЬ КОММЕНТАРИИ НИЖЕ ЕСЛИ clientInfo НЕ ПУСТОЙ !!!
+                    # if not check_print:
+                    #     fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True)  # чек не печатаем
+                    fptr.openReceipt()
 
-            for i in range(itemsQuantity):
-                item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
-                    t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit = jsonItemsDisassembly(
-                    check['items'][i])
-                productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum,
-                                    sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18,
-                                    t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA,
-                                    tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier,
-                                    dop_rekvizit, sno, fptr)
+                    for i in range(itemsQuantity):
+                        item_number, item_name, item_sign_sub_calc, item_price, item_quantity, item_sum, sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10, t1200_VAT_18, t1200_VAT_20, \
+                            t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP, transaction_BPA, tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier, dop_rekvizit = jsonItemsDisassembly(
+                            check['items'][i])
+                        productRegistration(item_number, item_name, item_sign_sub_calc, item_price, item_quantity,
+                                            item_sum,
+                                            sign_way_calc, item_mera, t1200_VAT_no, t1200_VAT_0, t1200_VAT_10,
+                                            t1200_VAT_18,
+                                            t1200_VAT_20, t1200_VAT_110, t1200_VAT_120, sign_agent, tel_OP,
+                                            transaction_BPA,
+                                            tel_PA, tel_OPP, name_OP, adress_OP, inn_OP, data_supplier, inn_supplier,
+                                            dop_rekvizit, sno, fptr)
 
-            if check_cash > 0:
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_cash)
-                fptr.payment()
-            if check_electron > 0:
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_electron)
-                fptr.payment()
+                    if check_cash > 0:
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CASH)
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_cash)
+                        fptr.payment()
+                    if check_electron > 0:
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_ELECTRONICALLY)
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_electron)
+                        fptr.payment()
 
-            # if check_prepay > 0:
-            #    fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID) # аванс
+                    # if check_prepay > 0:
+                    #    fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID) # аванс
 
-            if check_postpay > 0:
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CREDIT)  # кредит
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_postpay)
-                fptr.payment()
-            if check_prepay_offset > 0:
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_PREPAID)  # зачет предоплаты (аванса)
-                fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_prepay_offset)
-                fptr.payment()
+                    if check_postpay > 0:
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CREDIT)  # кредит
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_postpay)
+                        fptr.payment()
+                    if check_prepay_offset > 0:
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE,
+                                      IFptr.LIBFPTR_PT_PREPAID)  # зачет предоплаты (аванса)
+                        fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_prepay_offset)
+                        fptr.payment()
 
-            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
-            fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, sum_20_VAT)
-            fptr.receiptTax()
+                    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)
+                    fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_SUM, sum_20_VAT)
+                    fptr.receiptTax()
 
-            fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, check_sum)
-            fptr.receiptTotal()
+                    fptr.setParam(IFptr.LIBFPTR_PARAM_SUM, check_sum)
+                    fptr.receiptTotal()
 
-            fptr.closeReceipt()  # закрытие чека
-            CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr, key, content)  # обработка результата операции
-            status = 0
-            if CheckClosed:
-                status = 1
-            fptr.close()
-        # !!! Снять комментарии ниже при наличии корректного ИНН организации !!!
-        #elif connectStatus ==9:
-        #    status = 9
-        #    fiscalSign = ""
-        #    dateTime = ""
-        #    print("ИНН ККТ не соответствует ИНН организации!")
-        else:
-            status = 2
-            fiscalSign = ""
-            dateTime = ""
-            print("КАССА ЗАНЯТА!")
+                    fptr.closeReceipt()  # закрытие чека
+                    CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr, key,
+                                                                           content)  # обработка результата операции
+                    status = 0
+                    if CheckClosed:
+                        status = 1
+                    fptr.close()
+                # !!! Снять комментарии ниже при наличии корректного ИНН организации !!!
+                # elif connectStatus ==9:
+                #    status = 9
+                #    fiscalSign = ""
+                #    dateTime = ""
+                #    print("ИНН ККТ не соответствует ИНН организации!")
+                else:
+                    status = 2
+                    fiscalSign = ""
+                    dateTime = ""
+                    print("КАССА ЗАНЯТА!")
 
-        results.append(f"{status}={fiscalSign}={dateTime}")
+                results.append(f"{status}={fiscalSign}={dateTime}")
 
+            pbar.update(1)  # Обновляем прогрессбар на каждой итерации
+
+    # Сохраняем обновленные данные в файл
     with open('all_checks2.json', 'w', encoding='utf-8') as file:
         json.dump(content, file, ensure_ascii=False)
 
