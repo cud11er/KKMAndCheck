@@ -187,7 +187,7 @@ def checkReceiptClosed(fptr, check_key, content):
 
 def loadCheck():
     # Загрузка чека из файла
-    with open('all_checks2.json', 'r', encoding='utf-8') as file:
+    with open('all_checks.json', 'r', encoding='utf-8') as file:
         content = json.load(file)
 
     results = []  # Создание массива для записи каждого чека
@@ -196,7 +196,7 @@ def loadCheck():
     with tqdm(total=len(content), desc="Обработка чеков", unit="чек") as pbar:
         # Старт обработки тела чека
         for key, check in content.items():
-            printStatus = check.get('check_print', True)  # Проверяем чек на необходимость печати
+            printStatus = check.get('check_print', True) # Проверяем чек на необходимость печати
 
             if not printStatus:
                 print(f"Чек с ключом {key} печатать не надо.")
