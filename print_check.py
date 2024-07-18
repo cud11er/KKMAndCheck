@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 def initializationKKT(inn_company):
     # инициализация драйвера
+    settings = {}
     fptr = IFptr("")
     # Подгрузка данных для кассы
     with open('settings.json', 'r', encoding='utf-8') as file:
@@ -28,7 +29,6 @@ def initializationKKT(inn_company):
             IFptr.LIBFPTR_SETTING_PORT: IFptr.LIBFPTR_PORT_USB,
             # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
             IFptr.LIBFPTR_SETTING_REMOTE_SERVER_ADDR: remote_IP_address
-            # \\\\\\\\\\\\ Для удаленного подключения к кассе через ПК
         }
     if connectType == "USB":
         settings = {
@@ -41,8 +41,8 @@ def initializationKKT(inn_company):
     isOpened = fptr.isOpened()
     fptr.setParam(IFptr.LIBFPTR_PARAM_FN_DATA_TYPE, IFptr.LIBFPTR_FNDT_REG_INFO)
     fptr.fnQueryData()
-    # if isOpened == 1 and inn_company != fptr.getParamString(1018).strip():
-    #    isOpened = 9  # ИНН ККТ не соответсвует ИНН Организации (код ошибки - 9)
+    if isOpened == 1 and inn_company != fptr.getParamString(1018).strip():
+        isOpened = 9  # ИНН ККТ не соответствует ИНН Организации (код ошибки - 9)
     print('\nСтатус готовности к обмену с ККТ: ' + str(isOpened))
     return isOpened, fptr
 
@@ -136,14 +136,17 @@ def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, 
     fptr.setParam(IFptr.LIBFPTR_PARAM_COMMODITY_NAME, item_name)
     fptr.setParam(IFptr.LIBFPTR_PARAM_PRICE, item_price)
     fptr.setParam(IFptr.LIBFPTR_PARAM_QUANTITY, item_quantity)
+
     if item_mera == 71:  # единица измеренения - час
         fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_HOUR)
+
     else:  # единица измеренения - штука
         fptr.setParam(IFptr.LIBFPTR_PARAM_MEASUREMENT_UNIT, IFptr.LIBFPTR_IU_PIECE)
 
     if sno == 1:
         fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_VAT20)  # для ПР НДС - 20% (ОСН)
         fptr.setParam(IFptr.LIBFPTR_PARAM_USE_ONLY_TAX_TYPE, True)
+
     else:
         fptr.setParam(IFptr.LIBFPTR_PARAM_TAX_TYPE, IFptr.LIBFPTR_TAX_NO)  # для ПР - НДС не облагается (не ОСН)
 
@@ -152,12 +155,14 @@ def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, 
 
     fptr.setParam(1214, sign_way_calc)  # признак способа расчета: полный расчет (4), аванс (3)
     fptr.setParam(1212, item_sign_sub_calc)  # предмет расчета: товар (1), услуга (4), платеж (7)
-
     fptr.registration()
     return
 
 
 def checkReceiptClosed(fptr, check_key, content):
+    CheckClosed = None
+    fiscalSign = ""
+    dateTime = ""
     while fptr.checkDocumentClosed() < 0:  # не удалось проверить закрытие чека
         print(fptr.errorDescription())
         continue
@@ -169,8 +174,8 @@ def checkReceiptClosed(fptr, check_key, content):
         dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
         print("Фискальные данные чека: ", fiscalSign, " ", dateTime)
 
-        # Установка check_print в True после успешного закрытия чека
-        content[check_key]['check_print'] = True
+        # Установка check_print в False после успешного закрытия чека
+        content[check_key]['check_print'] = False
 
     elif not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # чек не закрылся, отменяем его
         fptr.cancelReceipt()
@@ -191,15 +196,13 @@ def loadCheck():
     with tqdm(total=len(content), desc="Обработка чеков", unit="чек") as pbar:
         # Старт обработки тела чека
         for key, check in content.items():
-            connectType = check['connect']
-            printStatus = check.get('check_print', False)
+            printStatus = check.get('check_print', True)  # Проверяем чек на необходимость печати
 
-            if printStatus:
-                print(f"Чек с ключом {key} уже напечатан.")
+            if not printStatus:
+                print(f"Чек с ключом {key} печатать не надо.")
                 continue
             else:
                 if check['operator'] == 'service-ping':
-                    ip_kassy = check['ip_kassy']
                     inn_company = check['inn_сompany']
                     connectStatus, fptr = initializationKKT(inn_company)  # инициализация и подключение ККТ
                     status = 2  # по умолчанию - касса не готова!
@@ -237,15 +240,16 @@ def loadCheck():
                     connectStatus, fptr = initializationKKT(inn_company)  # инициализация и подключение ККТ
 
                     if connectStatus == 1:  # ККТ готова
-                        fiscalSign = '0'
-                        dateTime = '0'
+                        # fiscalSign = '0'
+                        # dateTime = '0'
 
                         fptr.setParam(1021, operator)  # кассир
                         fptr.operatorLogin()
 
                         # Развилка: простой чек или чек коррекции?
                         if fd_type == 1:  # кассовый чек
-                            # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                            # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                            # fptr.setParam(1062, sno)  # применяемая система налогообложения
                             if sign_calc == 1:
                                 fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_SELL)  # ПРИХОД
                             if sign_calc == 2:
@@ -255,7 +259,8 @@ def loadCheck():
                                 fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_TYPE, IFptr.LIBFPTR_RT_BUY)  # РАСХОД
 
                         if fd_type == 2:  # чек коррекции
-                            # fptr.setParam(1062, sno)  # применяемая система налогообложения  # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                            # ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ !!!
+                            # fptr.setParam(1062, sno)  # применяемая система налогообложения
                             fptr.setParam(1178, datetime.datetime(int(check_data[6:10]), int(check_data[3:5]),
                                                                   int(check_data[
                                                                       :2])))  # нужны, если по предписанию ФНС
@@ -282,9 +287,10 @@ def loadCheck():
                         # дальше - общее и для чека и для коррекции
 
                         fptr.setParam(1008, clientInfo)  # данные клиента (приходит пустая строка)
-                        # !!! уБРАТЬ КОММЕНТАРИИ НИЖЕ ЕСЛИ clientInfo НЕ ПУСТОЙ !!!
-                        # if not check_print:
-                        #     fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True)  # чек не печатаем
+                        # !!! ПРОВЕКРА ЧЕКА НА НЕОБХОДИМОСТЬ ПЕЧАТИ (У МЕНЯ ЭТО ПОМЕНЯНО НА ПЕЧАТАЛСЯ ЧЕК ИЛИ НЕТ)!!!
+
+                        if not check_print:
+                            fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True)  # чек не печатаем
                         fptr.openReceipt()
 
                         for i in range(itemsQuantity):
@@ -350,7 +356,7 @@ def loadCheck():
 
                     results.append(f"{status}={fiscalSign}={dateTime}")
 
-            pbar.update(1)  # Обновляем прогрессбар на каждой итерации
+            pbar.update(1)  # Обновляем прогресс-бар на каждой итерации
 
     # Сохраняем обновленные данные в файл
     with open('all_checks2.json', 'w', encoding='utf-8') as file:
