@@ -3,7 +3,7 @@ import datetime
 import json
 from tqdm import tqdm
 import time
-
+import hashlib
 
 def initializationKKT(inn_company, key):
     # инициализация драйвера
@@ -197,7 +197,6 @@ def loadCheck():
     with tqdm(total=len(content), desc="Обработка чеков", unit="чек") as pbar:
         # Старт обработки тела чека
         for key, check in content.items():
-            printStatus = check.get('check_print', True) # Проверяем чек на необходимость печати
 
             if check['operator'] == 'service-ping':
                 inn_company = check['inn_сompany']
@@ -317,6 +316,7 @@ def loadCheck():
                         fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE, IFptr.LIBFPTR_PT_CREDIT)  # кредит
                         fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_SUM, check_postpay)
                         fptr.payment()
+
                     if check_prepay_offset > 0:
                         fptr.setParam(IFptr.LIBFPTR_PARAM_PAYMENT_TYPE,
                                       IFptr.LIBFPTR_PT_PREPAID)  # зачет предоплаты (аванса)
@@ -454,8 +454,19 @@ def get_INN():
     print(f'ИНН {INN}')
     return INN
 
+stored_hashed_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
+
+def check_password():
+    input_password = input("Введите пароль: ")
+    input_password_hashed = hashlib.sha256(input_password.encode()).hexdigest()
+    return input_password_hashed == stored_hashed_password
+
 
 if __name__ == "__main__":
+    # Проверка пароля
+    while not check_password():
+        print("Неверный пароль. Попробуйте снова.")
+
     while True:
         # Выводим меню для пользователя
         print("Выберите действие:")
@@ -472,11 +483,11 @@ if __name__ == "__main__":
         if choice == "1":
             loadCheck()  # Вызываем функцию loadCheck()
         elif choice == "2":
-            testOFD()
+            testOFD()  # Вызываем функцию тестирования ОФД
         elif choice == '3':
-            get_INN()
+            get_INN()  # получаем ИНН
         elif choice == '4':
-            testKkt()
+            testKkt()  # Тестируем ККТ
         elif choice == '5':
             print("Выход из программы.")
             exit()
