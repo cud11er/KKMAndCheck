@@ -212,7 +212,6 @@ def loadCheck():
                 results.append(f"{status}={fiscalSign}={dateTime}")
 
             elif check['operator'] == 'service-X-report':
-                ip_kassy = check['ip_kassy']
                 inn_company = check['inn_сompany']
                 connectStatus, fptr = initializationKKT(inn_company, key)  # инициализация и подключение ККТ
                 status = 2
@@ -284,8 +283,7 @@ def loadCheck():
                     # дальше - общее и для чека и для коррекции
 
                     fptr.setParam(1008, clientInfo)  # данные клиента (приходит пустая строка)
-                    # !!! ПРОВЕКРА ЧЕКА НА НЕОБХОДИМОСТЬ ПЕЧАТИ (У МЕНЯ ЭТО ПОМЕНЯНО НА ПЕЧАТАЛСЯ ЧЕК ИЛИ НЕТ)!!!
-
+                    #  ПРОВЕКРА ЧЕКА НА НЕОБХОДИМОСТЬ ПЕЧАТИ
                     if not check_print:
                         fptr.setParam(IFptr.LIBFPTR_PARAM_RECEIPT_ELECTRONICALLY, True)  # чек не печатаем
                     fptr.openReceipt()
@@ -333,8 +331,7 @@ def loadCheck():
                     fptr.receiptTotal()
 
                     fptr.closeReceipt()  # закрытие чека
-                    CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr, key,
-                                                                           content)  # обработка результата операции
+                    CheckClosed, fiscalSign, dateTime = checkReceiptClosed(fptr, key, content)  # обработка результата операции
                     status = 0
                     if CheckClosed:
                         status = 1
@@ -354,7 +351,7 @@ def loadCheck():
                 results.append(f"{status}={fiscalSign}={dateTime}")
 
             pbar.update(1)  # Обновляем прогресс-бар на каждой итерации
-            time.sleep(1)
+            time.sleep(1) # задержка, чтобы касса успела обработать предыдущий чек
     return results
 
 
@@ -381,9 +378,8 @@ def testKkt():
 
     fptr.open()
     isOpened = fptr.isOpened()
-    print('isOpened')
+    print(f'Открыт со статусом: {isOpened}')
     fptr.lineFeed()
-    print(isOpened)
     # return 'version: ' + str(version)
 
     # Закрытие смены
