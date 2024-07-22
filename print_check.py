@@ -454,12 +454,12 @@ def get_INN():
     print(f'ИНН {INN}')
     return INN
 
-stored_hashed_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
+hash_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
 
 def check_password():
-    input_password = input("Введите пароль: ")
-    input_password_hashed = hashlib.sha256(input_password.encode()).hexdigest()
-    return input_password_hashed == stored_hashed_password
+    password = input("Введите пароль: ")
+    input_password_hashed = hashlib.sha256(password.encode()).hexdigest()
+    return input_password_hashed == hash_password
 
 
 if __name__ == "__main__":
