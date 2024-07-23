@@ -4,14 +4,29 @@ import json
 from tqdm import tqdm
 import time
 import hashlib
+import os
+import sys
+from getpass import getpass
 
 def initializationKKT(inn_company, key):
     # инициализация драйвера
     settings = {}
     fptr = IFptr("")
     # Подгрузка данных для кассы
-    with open('settings.json', 'r', encoding='utf-8') as file:
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в .exe
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # Если приложение запускается как обычный скрипт
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Определяем путь к файлу относительно исполняемого файла
+    file_path = os.path.join(application_path, 'settings.json')
+
+    # Загрузка чека из файла
+    with open(file_path, 'r', encoding='utf-8') as file:
         jsonData = json.load(file)
+
     ip_kassy = jsonData['ip_kassy']
     connectType = jsonData['connection_Type']
     port = jsonData['port']
@@ -187,8 +202,19 @@ def checkReceiptClosed(fptr, check_key, content):
 
 
 def loadCheck():
+    # Определение каталога файла JSON с чеками
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в .exe
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # Если приложение запускается как обычный скрипт
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Определяем путь к файлу относительно исполняемого файла
+    file_path = os.path.join(application_path, 'all_checks.json')
+
     # Загрузка чека из файла
-    with open('all_checks.json', 'r', encoding='utf-8') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         content = json.load(file)
 
     results = []  # Создание массива для записи каждого чека
@@ -359,10 +385,20 @@ def testKkt():
     # Инициализация драйвера
     fptr = IFptr("")
     version = fptr.version()
+    print(f'version v.{version}')
 
-    print('version')
-    print(version)
-    with open('settings.json', 'r', encoding='utf-8') as file:
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в .exe
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # Если приложение запускается как обычный скрипт
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Определяем путь к файлу относительно исполняемого файла
+    file_path = os.path.join(application_path, 'settings.json')
+
+    # Загрузка чека из файла
+    with open(file_path, 'r', encoding='utf-8') as file:
         jsonData = json.load(file)
     ip_kassy = jsonData['ip_kassy']
     port = jsonData['port']
@@ -402,10 +438,20 @@ def testOFD():
     # Инициализация драйвера
     fptr = IFptr("")
     version = fptr.version()
-    print('version')
-    print(version)
+    print(f'version v.{version}')
     # Подключение ККТ
-    with open('settings.json', 'r', encoding='utf-8') as file:
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в .exe
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # Если приложение запускается как обычный скрипт
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Определяем путь к файлу относительно исполняемого файла
+    file_path = os.path.join(application_path, 'settings.json')
+
+    # Загрузка чека из файла
+    with open(file_path, 'r', encoding='utf-8') as file:
         jsonData = json.load(file)
     ip_kassy = jsonData['ip_kassy']
     port = jsonData['port']
@@ -429,9 +475,20 @@ def get_INN():
     # Инициализация драйвера
     fptr = IFptr("")
     version = fptr.version()
-    print('version')
-    print(version)
-    with open('settings.json', 'r', encoding='utf-8') as file:
+    print(f'Версия v.{version}')
+
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в .exe
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # Если приложение запускается как обычный скрипт
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Определяем путь к файлу относительно исполняемого файла
+    file_path = os.path.join(application_path, 'settings.json')
+
+    # Загрузка чека из файла
+    with open(file_path, 'r', encoding='utf-8') as file:
         jsonData = json.load(file)
     ip_kassy = jsonData['ip_kassy']
     port = jsonData['port']
@@ -457,10 +514,9 @@ def get_INN():
 hash_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
 
 def check_password():
-    password = input("Введите пароль: ")
+    password = getpass("Введите пароль: ")
     input_password_hashed = hashlib.sha256(password.encode()).hexdigest()
     return input_password_hashed == hash_password
-
 
 if __name__ == "__main__":
     # Проверка пароля
