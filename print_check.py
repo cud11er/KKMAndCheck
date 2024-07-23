@@ -524,8 +524,8 @@ def get_INN():
 hash_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
 
 def check_password():
-    #password = getpass("Введите пароль: ")
-    password = input()
+    password = getpass("Введите пароль: ")
+    #password = input()
     input_password_hashed = hashlib.sha256(password.encode()).hexdigest()
     return input_password_hashed == hash_password
 
