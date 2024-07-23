@@ -227,7 +227,7 @@ def loadCheck():
     with tqdm(total=len(content), desc="Обработка чеков", unit="чек") as pbar:
         # Старт обработки тела чека
         for key, check in content.items():
-            if not check.get('fiscal_data'):
+            if not check.get('fiscal_data') and not check.get('date_time'):
                 if check['operator'] == 'service-ping':
                     inn_company = check['inn_сompany']
                     connectStatus, fptr = initializationKKT(inn_company, key)  # инициализация и подключение ККТ
