@@ -200,9 +200,9 @@ def checkReceiptClosed(fptr, check_key, content):
     print("Результат закрытия чека: " + fptr.errorDescription())
     return CheckClosed, fiscalSign, dateTime
 
-def datetime_serializer(obj):
-    if isinstance(obj, datetime.datetime):
-        return obj.isoformat()
+def datetime_serializer(object):
+    if isinstance(object, datetime.datetime):
+        return object.isoformat()
     raise TypeError("Type not serializable")
 
 def loadCheck():
@@ -382,12 +382,13 @@ def loadCheck():
 
                 pbar.update(1)  # Обновляем прогресс-бар на каждой итерации
                 time.sleep(1) # задержка, чтобы касса успела обработать предыдущий чек
+
+                # Запись обновленного содержимого обратно в файл JSON
+                with open(file_path, 'w', encoding='utf-8') as file:
+                    json.dump(content, file, ensure_ascii=False, indent=4, default=datetime_serializer)
+
             else:
                 print(f"Чек с ключом: {key} уже проведён")
-    # Запись обновленного содержимого обратно в файл JSON
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(content, file, ensure_ascii=False, indent=4, default=datetime_serializer)
-
     return results
 
 
