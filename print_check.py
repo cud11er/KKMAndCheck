@@ -175,7 +175,7 @@ def productRegistration(item_number, item_name, item_sign_sub_calc, item_price, 
     return
 
 
-def checkReceiptClosed(fptr, check_key, content):
+def checkReceiptClosed(fptr, key, content):
     CheckClosed = None
     fiscalSign = ""
     dateTime = ""
@@ -190,8 +190,8 @@ def checkReceiptClosed(fptr, check_key, content):
         dateTime = fptr.getParamDateTime(IFptr.LIBFPTR_PARAM_DATE_TIME)
         print("Фискальные данные чека: ", fiscalSign, " ", dateTime)
 
-        content[check_key]['fiscal_data'] = fiscalSign
-        content[check_key]['date_time'] = dateTime
+        content[key]['fiscal_data'] = fiscalSign
+        content[key]['date_time'] = dateTime
 
     elif not fptr.getParamBool(IFptr.LIBFPTR_PARAM_DOCUMENT_CLOSED):  # чек не закрылся, отменяем его
         fptr.cancelReceipt()
@@ -522,13 +522,18 @@ def get_INN():
     print(f'ИНН {INN}')
     return INN
 
-hash_password = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
 
 def check_password():
+    hash_password: str = "df31d26273df57b833aae958e4f90ef73313e478f8d7d1f54fff0d588ebf2f28"
     password = getpass("Введите пароль: ")
-    #password = input()
     input_password_hashed = hashlib.sha256(password.encode()).hexdigest()
     return input_password_hashed == hash_password
+
+def count():
+    with open('all_checks.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    length = len(data)
+    print(length)
 
 if __name__ == "__main__":
     # Проверка пароля
@@ -542,7 +547,8 @@ if __name__ == "__main__":
         print("2. Тест ОФД")
         print('3. Получить ИНН')
         print('4. Тест ККМ')
-        print('5. Выход')
+        print('5. Проверить количество чеков в JSON')
+        print('6. Выход')
 
         # Получаем выбор пользователя
         choice = input("Введите цифру выбора: ")
@@ -557,6 +563,8 @@ if __name__ == "__main__":
         elif choice == '4':
             testKkt()  # Тестируем ККТ
         elif choice == '5':
+            count()
+        elif choice == '6':
             print("Выход из программы.")
             exit()
         else:
